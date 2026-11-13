@@ -143,7 +143,7 @@ footer{text-align:center;color:var(--muted);font-size:12.5px;margin-top:30px}
       <div class="row"><button class="link" id="all">Tout cocher</button><span class="meta">·</span><button class="link" id="none">Tout décocher</button></div>
     </div>
     <div class="chapters" id="list"></div>
-    <div class="note">✏️ Tu peux renommer un chapitre en cliquant sur son titre, ou décocher ceux que tu ne veux pas (sommaire, remerciements…).</div>
+    <div class="note">✏️ Tu peux renommer un chapitre en cliquant sur son titre, ou décocher ceux que tu ne veux pas (remerciements, pages de garde…). Le sommaire est retiré automatiquement. Clique sur « Voir le début » pour vérifier où commence la lecture.</div>
     <div style="margin-top:18px" class="row">
       <button class="btn ghost" id="restart">Changer de fichier</button>
       <button class="btn primary wide" id="go">🎧 Créer le livre audio</button>
@@ -202,6 +202,7 @@ async function loadVoices() {
   voices.forEach(v => (groups[v.region] ||= []).push(v));
   $('#voice').innerHTML = Object.entries(groups).map(([g, vs]) => `<optgroup label="${esc(g)}">${vs.map(v=>`<option value="${v.id}">${esc(v.name)} — ${v.gender}</option>`).join('')}</optgroup>`).join('');
   $('#voice').value = store.get('audiko-voice') || 'fr-FR-HenriNeural';
+  if (/Multilingual/.test($('#voice').value)) $('#voice').value = 'fr-FR-HenriNeural';
   if (!$('#voice').value) $('#voice').selectedIndex = 0;
 }
 loadVoices();
@@ -249,9 +250,15 @@ function showSetup() {
   $('#list').innerHTML = job.chapters.map(c => `
     <div class="ch ${c.selected?'':'off'}" data-i="${c.index}">
       <input type="checkbox" class="sel" ${c.selected?'checked':''} style="width:18px;height:18px;accent-color:var(--accent)">
-      <div><input type="text" class="title" value="${esc(c.title)}"><div class="meta">${c.chars.toLocaleString('fr-FR')} caractères · ≈ <span class="d" data-c="${c.chars}"></span></div></div>
+      <div><input type="text" class="title" value="${esc(c.title)}"><div class="meta">${c.chars.toLocaleString('fr-FR')} caractères · ≈ <span class="d" data-c="${c.chars}"></span> · <button class="link peek">Voir le début</button></div><div class="excerpt meta hidden" style="margin-top:6px;font-style:italic;line-height:1.5"></div></div>
       <div class="num">${c.index+1}</div>
     </div>`).join('');
+  $('#list').querySelectorAll('.peek').forEach(b => b.onclick = async () => {
+    const row = b.closest('.ch'), ex = row.querySelector('.excerpt');
+    if (!ex.classList.contains('hidden')) { ex.classList.add('hidden'); b.textContent = 'Voir le début'; return; }
+    try { const d = await (await api(`/api/job/${job.id}/chapter/${row.dataset.i}/text`)).json();
+      ex.textContent = '« ' + d.text.slice(0, 280).replace(/\s+/g,' ') + '… »'; ex.classList.remove('hidden'); b.textContent = 'Masquer'; } catch(e) {}
+  });
   $('#list').querySelectorAll('.sel').forEach(cb => cb.onchange = () => { cb.closest('.ch').classList.toggle('off', !cb.checked); updateTotals(); });
   updateTotals();
   window.scrollTo({top:0, behavior:'smooth'});
@@ -341,6 +348,18 @@ $('#merge').onclick = () => {
 };
 $('#retry').onclick = async () => { job = await (await api(`/api/job/${job.id}/retry`, {method:'POST'})).json(); render(); startPoll(); };
 $('#again').onclick = () => { stopPoll(); showSetup(); };
+
+// un seul audio à la fois, et on enchaîne automatiquement sur le chapitre suivant
+document.addEventListener('play', e => {
+  if (e.target.tagName !== 'AUDIO') return;
+  document.querySelectorAll('audio').forEach(a => { if (a !== e.target) a.pause(); });
+}, true);
+document.addEventListener('ended', e => {
+  if (e.target.tagName !== 'AUDIO' || !e.target.closest('#out')) return;
+  const all = [...document.querySelectorAll('#out audio')];
+  const next = all[all.indexOf(e.target) + 1];
+  if (next) { next.scrollIntoView({behavior:'smooth', block:'center'}); next.play(); }
+}, true);
 
 // reprise après rechargement de la page
 (async () => {

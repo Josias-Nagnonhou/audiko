@@ -14,13 +14,14 @@ from fastapi.responses import FileResponse, HTMLResponse, Response, StreamingRes
 from pydantic import BaseModel
 
 from extract import extract_chapters
+from normalize import normalize
 
 ROOT = Path(os.environ.get("AUDIKO_DATA", "/tmp/audiko"))
 ROOT.mkdir(parents=True, exist_ok=True)
 STATIC = Path(__file__).parent / "static"
 MAX_UPLOAD = 60 * 1024 * 1024
 JOB_TTL = 24 * 3600
-CHUNK = 4000          # caractères envoyés à la voix d'un coup
+CHUNK = 6000          # caractères envoyés à la voix d'un coup
 PARALLEL = 3          # chapitres convertis en même temps
 
 app = FastAPI(title="Audiko")
@@ -29,8 +30,8 @@ JOBS: dict[str, dict] = {}
 FALLBACK_VOICES = [
     {"id": "fr-FR-HenriNeural", "name": "Henri", "gender": "Homme", "region": "France"},
     {"id": "fr-FR-DeniseNeural", "name": "Denise", "gender": "Femme", "region": "France"},
-    {"id": "fr-FR-RemyMultilingualNeural", "name": "Rémy", "gender": "Homme", "region": "France"},
-    {"id": "fr-FR-VivienneMultilingualNeural", "name": "Vivienne", "gender": "Femme", "region": "France"},
+    {"id": "fr-FR-RemyMultilingualNeural", "name": "Rémy (multilingue, moins stable)", "gender": "Homme", "region": "France"},
+    {"id": "fr-FR-VivienneMultilingualNeural", "name": "Vivienne (multilingue, moins stable)", "gender": "Femme", "region": "France"},
     {"id": "fr-FR-EloiseNeural", "name": "Éloïse", "gender": "Femme", "region": "France"},
     {"id": "fr-CA-AntoineNeural", "name": "Antoine", "gender": "Homme", "region": "Canada"},
     {"id": "fr-CA-SylvieNeural", "name": "Sylvie", "gender": "Femme", "region": "Canada"},
@@ -141,14 +142,17 @@ async def voices():
             for v in vs:
                 if v["Locale"].startswith("fr-"):
                     short = v["ShortName"]
+                    multi = "Multilingual" in short
                     name = short.split("-")[2].replace("Neural", "").replace("Multilingual", "")
+                    if multi:
+                        name += " (multilingue, moins stable)"
                     out.append({
                         "id": short, "name": name,
                         "gender": "Femme" if v["Gender"] == "Female" else "Homme",
                         "region": REGIONS.get(v["Locale"].split("-")[1], v["Locale"]),
                     })
             order = {"France": 0, "Belgique": 1, "Suisse": 2, "Canada": 3}
-            out.sort(key=lambda x: (order.get(x["region"], 9), x["gender"], x["name"]))
+            out.sort(key=lambda x: (order.get(x["region"], 9), "multilingue" in x["name"], x["gender"], x["name"]))
             _voices_cache = out or FALLBACK_VOICES
         except Exception:
             return FALLBACK_VOICES
@@ -205,7 +209,7 @@ async def upload(file: UploadFile = File(...)):
         "id": jid, "filename": name, "book": book, "status": "ready", "created": time.time(),
         "chapters": [
             {"index": i, "title": c["title"], "text": c["text"], "chars": len(c["text"]),
-             "status": "pending", "progress": 0, "error": None, "selected": True, "size": 0}
+             "status": "pending", "progress": 0, "error": None, "selected": c.get("selected", True), "size": 0}
             for i, c in enumerate(chapters)
         ],
     }
@@ -268,9 +272,10 @@ async def convert(jid: str, req: ConvertReq):
 async def run_chapter(job, c, sem):
     async with sem:
         c["status"], c["progress"] = "running", 0
-        text = c["text"]
-        if job["read_titles"] and not text.lower().startswith(c["title"].lower()[:20]):
-            text = f"{c['title']}.\n\n{text}"
+        text = normalize(c["text"])
+        if job["read_titles"] and not c["title"].startswith("Début du livre") and \
+                not text.lower().startswith(normalize(c["title"]).lower()[:20].rstrip(".")):
+            text = f"{normalize(c['title'])}\n\n{text}"
         parts = split_text(text)
         out = ROOT / job["id"] / f"{c['index']:03d}.mp3"
         tmp = out.with_suffix(".part")

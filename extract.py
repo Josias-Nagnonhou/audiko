@@ -12,7 +12,10 @@ SPECIAL = (r"(?:introduction|avant-propos|avant propos|préface|preface|prologue
 RE_NUMBERED = re.compile(rf"^\s*{CHAPTER_WORDS}\s+{NUM}\b", re.I)
 RE_SPECIAL = re.compile(rf"^\s*{SPECIAL}\s*[:.\-–—]?\s*$", re.I)
 RE_SPECIAL_PREFIX = re.compile(rf"^\s*{SPECIAL}\s*[:\-–—]\s*\S", re.I)
-RE_TOC_LINE = re.compile(r"(\.{3,}|…{2,}|\s{3,})\s*\d{1,4}\s*$")
+RE_TOC_LINE = re.compile(r"(\.{3,}|…{2,}|\s{3,}|\t|_{3,})\s*\d{1,4}\s*$")
+RE_TOC_HEAD = re.compile(r"^\s*(sommaire|table des mati[eè]res|contents|table of contents|plan du livre)\s*[:.]?\s*$", re.I)
+RE_ENDS_PAGE = re.compile(r"\s\d{1,3}\s*$")
+FRONT_WORDS = re.compile(r"(tous droits r[ée]serv|isbn|copyright|©|d[ée]p[oô]t l[ée]gal|code de la propri[ée]t[ée]|reproduction interdite)", re.I)
 RE_PAGE_NUM = re.compile(r"^\s*(page\s*)?\d{1,4}\s*(/\s*\d{1,4})?\s*$", re.I)
 
 MIN_BODY = 250  # un "chapitre" plus court est considéré comme une ligne de sommaire
@@ -24,6 +27,8 @@ def is_heading(line: str) -> bool:
         return False
     if RE_TOC_LINE.search(s):
         return False
+    if RE_TOC_HEAD.match(s):
+        return True
     return bool(RE_NUMBERED.match(s) or RE_SPECIAL.match(s) or RE_SPECIAL_PREFIX.match(s))
 
 
@@ -322,19 +327,38 @@ def split_chapters(blocks):
         i += 1
     sections.append([cur_title, cur])
 
-    # enlever les entrées de sommaire (titres sans vrai contenu)
+    # enlever le sommaire, les pages de garde et les entrées de sommaire (titres sans vrai contenu)
     chapters = []
     for title, paras in sections:
+        if title is not None and RE_TOC_HEAD.match(title):
+            continue  # section "Sommaire" / "Table des matières" : jamais lue
+        # retirer les lignes de sommaire restantes ("Chapitre 2 : Titre ..... 14" ou "Chapitre 2 Titre 14")
+        paras = [p for p in paras if not (RE_TOC_LINE.search(p) or (len(p) < 110 and RE_ENDS_PAGE.search(p)
+                 and (RE_NUMBERED.match(p) or RE_SPECIAL_PREFIX.match(p) or re.match(rf"^\s*{SPECIAL}\b", p, re.I))))]
         body = clean_text("\n\n".join(paras))
         if title is None:
+            # texte avant le premier titre : page de titre, droits d'auteur… décoché par défaut
             if len(body) >= 400:
-                chapters.append({"title": "Début du livre", "text": body})
+                front = bool(FRONT_WORDS.search(body[:3000])) or len(body) < 2500
+                chapters.append({"title": "Début du livre (avant le 1er chapitre)", "text": body, "selected": not front})
             continue
         if len(body) < MIN_BODY:
             continue
-        chapters.append({"title": clean_title(title), "text": body})
+        chapters.append({"title": clean_title(title), "text": body, "selected": True})
+
+    # même titre deux fois : la première occurrence courte vient du sommaire
+    seen = {}
+    for c in chapters:
+        seen.setdefault(c["title"].lower(), []).append(c)
+    for dup in seen.values():
+        if len(dup) > 1:
+            for c in dup[:-1]:
+                if len(c["text"]) < 1500:
+                    chapters.remove(c)
 
     # titres en double (sommaire puis vrai chapitre) : rien à faire, le sommaire a été retiré.
+    if len(chapters) == 1 and chapters[0]["title"].startswith("Début du livre"):
+        chapters = auto_split(chapters[0]["text"])
     if not chapters:
         full = clean_text("\n\n".join(unmark(b) for b in blocks))
         chapters = auto_split(full)
@@ -361,7 +385,7 @@ def auto_split(text, target=25000):
         cur += ("\n\n" if cur else "") + p
     if cur:
         parts.append(cur)
-    return [{"title": f"Partie {i + 1}", "text": t} for i, t in enumerate(parts)]
+    return [{"title": f"Partie {i + 1}", "text": t, "selected": True} for i, t in enumerate(parts)]
 
 
 def extract_chapters(filename: str, data: bytes):
