@@ -127,26 +127,39 @@ def read_pdf(data: bytes):
 
 
 def read_docx(data: bytes):
+    """Lit le Word dans l'ordre exact du document (paragraphes, tableaux, zones de texte), sans doublons."""
     import docx
+    from docx.oxml.ns import qn
     d = docx.Document(io.BytesIO(data))
-    blocks = []
-    for p in d.paragraphs:
-        t = p.text.strip()
+    styles = {}
+    for st in d.styles:
+        try:
+            styles[st.style_id] = (st.name or "").lower()
+        except Exception:
+            pass
+    fallback = qn("mc:Fallback") if False else "{http://schemas.openxmlformats.org/markup-compatibility/2006}Fallback"
+    blocks, last = [], None
+    for p in d.element.body.iter(qn("w:p")):
+        # ignorer la copie "de secours" des zones de texte et les paragraphes imbriqués dans un autre
+        anc, skip = p.getparent(), False
+        while anc is not None:
+            if anc.tag == fallback or anc.tag == qn("w:p"):
+                skip = True
+                break
+            anc = anc.getparent()
+        if skip:
+            continue
+        t = "".join(x.text or "" for x in p.iter() if x.tag in (qn("w:t"), qn("w:tab")) )
+        t = re.sub(r"\s+", " ", t).strip()
         if not t:
             continue
-        style = (p.style.name or "").lower() if p.style is not None else ""
-        if re.match(r"^(heading|titre)\s*1$", style) or style in ("title", "titre"):
-            blocks.append("\x00H" + t)
-        elif is_heading(t):
+        last = t
+        sid = p.find(qn("w:pPr") + "/" + qn("w:pStyle"))
+        style = styles.get(sid.get(qn("w:val")), "") if sid is not None else ""
+        if re.match(r"^(heading|titre)\s*1$", style) or style in ("title", "titre") or is_heading(t):
             blocks.append("\x00H" + t)
         else:
             blocks.append(t)
-    # tableaux : on lit leur texte aussi
-    for table in d.tables:
-        for row in table.rows:
-            cells = [c.text.strip() for c in row.cells if c.text.strip()]
-            if cells:
-                blocks.append(". ".join(dict.fromkeys(cells)))
     return blocks
 
 
@@ -281,6 +294,13 @@ def read_txt(data: bytes):
 def read_any(filename: str, data: bytes):
     ext = filename.lower().rsplit(".", 1)[-1] if "." in filename else ""
     if ext == "pdf" or data[:4] == b"%PDF":
+        try:
+            from pdf_layout import read_pdf_layout
+            blocks = read_pdf_layout(data)
+            if sum(len(b) for b in blocks) > 200:
+                return blocks
+        except Exception:
+            pass
         return read_pdf(data)
     if ext == "docx":
         return read_docx(data)

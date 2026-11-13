@@ -220,7 +220,7 @@ async def upload(file: UploadFile = File(...)):
 @app.get("/api/job/{jid}/chapter/{idx}/text")
 def chapter_text(jid: str, idx: int):
     job = JOBS.get(jid) or _404()
-    return {"title": job["chapters"][idx]["title"], "text": job["chapters"][idx]["text"]}
+    return {"title": job["chapters"][idx]["title"], "text": normalize(job["chapters"][idx]["text"])}
 
 
 class ChapterEdit(BaseModel):
