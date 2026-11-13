@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Audiko — ton ebook en livre audio</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='24' fill='%236d28d9'/><path d='M30 62V42a20 20 0 0 1 40 0v20' stroke='white' stroke-width='8' fill='none' stroke-linecap='round'/><rect x='22' y='56' width='16' height='22' rx='6' fill='white'/><rect x='62' y='56' width='16' height='22' rx='6' fill='white'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f6f5fb; --card:#ffffff; --ink:#15121f; --muted:#6b6880; --line:#e7e4f0;
+  --accent:#6d28d9; --accent2:#c026d3; --soft:#f1ebff; --ok:#059669; --err:#dc2626;
+  --shadow:0 1px 2px rgba(20,10,50,.04),0 8px 30px rgba(20,10,50,.06);
+}
+[data-theme=dark]{
+  --bg:#0d0b14; --card:#17141f; --ink:#f3f1fa; --muted:#9a96ad; --line:#2a2638;
+  --soft:#231b38; --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 30px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
+.wrap{max-width:920px;margin:0 auto;padding:20px 18px 80px}
+header{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:22px;letter-spacing:-.02em}
+.logo .mark{width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:grid;place-items:center;box-shadow:0 6px 20px rgba(109,40,217,.35)}
+.icon-btn{border:1px solid var(--line);background:var(--card);color:var(--ink);width:40px;height:40px;border-radius:12px;cursor:pointer;display:grid;place-items:center}
+h1{font-size:clamp(28px,5vw,44px);line-height:1.08;letter-spacing:-.03em;margin:0 0 10px;font-weight:800}
+h1 span{background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.lead{color:var(--muted);font-size:16px;margin:0 0 26px;max-width:620px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:22px;box-shadow:var(--shadow);margin-bottom:18px}
+.step{display:flex;align-items:center;gap:10px;font-weight:700;font-size:15px;margin-bottom:14px}
+.step b{width:26px;height:26px;border-radius:8px;background:var(--soft);color:var(--accent);display:grid;place-items:center;font-size:13px}
+[data-theme=dark] .step b{color:#c4b5fd}
+.drop{border:2px dashed var(--line);border-radius:16px;padding:38px 18px;text-align:center;cursor:pointer;transition:.2s}
+.drop:hover,.drop.over{border-color:var(--accent);background:var(--soft)}
+.drop .big{font-weight:700;font-size:17px;margin:10px 0 4px}
+.drop .small{color:var(--muted);font-size:13.5px}
+.formats{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:14px}
+.chip{font-size:11.5px;font-weight:600;padding:4px 9px;border-radius:99px;background:var(--soft);color:var(--accent)}
+[data-theme=dark] .chip{color:#c4b5fd}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:640px){.grid{grid-template-columns:1fr}}
+label.f{display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:6px}
+input[type=text],select{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:12px;background:var(--bg);color:var(--ink);font:inherit;font-size:15px}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.row{display:flex;gap:10px;align-items:center}
+.btn{border:0;border-radius:12px;padding:12px 18px;font:inherit;font-weight:700;font-size:15px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;justify-content:center;transition:.15s}
+.btn.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;box-shadow:0 8px 24px rgba(109,40,217,.3)}
+.btn.primary:hover{transform:translateY(-1px)}
+.btn.ghost{background:var(--soft);color:var(--accent)}
+[data-theme=dark] .btn.ghost{color:#c4b5fd}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none!important;box-shadow:none}
+.btn.wide{width:100%;padding:15px;font-size:16px}
+.check{display:flex;gap:9px;align-items:center;font-size:14px;cursor:pointer}
+.check input{width:18px;height:18px;accent-color:var(--accent)}
+.chapters{display:flex;flex-direction:column;gap:8px;max-height:none}
+.ch{border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center}
+.ch.off{opacity:.5}
+.ch .num{width:30px;height:30px;border-radius:9px;background:var(--soft);color:var(--accent);font-weight:700;font-size:13px;display:grid;place-items:center}
+[data-theme=dark] .ch .num{color:#c4b5fd}
+.ch input.title{border:0;background:transparent;padding:4px 0;font-weight:600;font-size:15px;border-radius:0;border-bottom:1px dashed transparent}
+.ch input.title:focus{outline:0;border-bottom-color:var(--accent)}
+.meta{font-size:12.5px;color:var(--muted)}
+.bar{height:6px;border-radius:99px;background:var(--line);overflow:hidden;margin-top:7px}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .4s}
+.ch audio{width:100%;height:36px;margin-top:8px}
+.st{font-size:12px;font-weight:700;padding:4px 9px;border-radius:99px;white-space:nowrap}
+.st.done{background:#d1fae5;color:#065f46}.st.running{background:var(--soft);color:var(--accent)}
+.st.pending{background:var(--line);color:var(--muted)}.st.error{background:#fee2e2;color:#991b1b}
+.dl{color:var(--accent);text-decoration:none;font-weight:700;font-size:13px;display:inline-flex;gap:5px;align-items:center}
+[data-theme=dark] .dl{color:#c4b5fd}
+.hero-progress{display:flex;justify-content:space-between;align-items:end;margin-bottom:8px}
+.hero-progress .pct{font-size:34px;font-weight:800;letter-spacing:-.03em}
+.bar.big{height:10px}
+.merge{margin-top:16px;padding:18px;border-radius:16px;background:linear-gradient(135deg,rgba(109,40,217,.08),rgba(192,38,211,.08));border:1px solid var(--line)}
+.merge h3{margin:0 0 4px;font-size:17px}
+.merge p{margin:0 0 14px;color:var(--muted);font-size:14px}
+.note{font-size:13px;color:var(--muted);background:var(--bg);border-radius:12px;padding:10px 12px;margin-top:12px}
+.err{color:var(--err);font-size:14px;margin-top:10px;font-weight:600}
+.hidden{display:none!important}
+.toolbar{display:flex;justify-content:space-between;align-items:center;margin:4px 0 12px;flex-wrap:wrap;gap:8px}
+.link{background:none;border:0;color:var(--accent);font:inherit;font-weight:600;font-size:13px;cursor:pointer;padding:0}
+[data-theme=dark] .link{color:#c4b5fd}
+.spin{width:16px;height:16px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:s .7s linear infinite;display:inline-block}
+@keyframes s{to{transform:rotate(360deg)}}
+.book-head{display:flex;gap:14px;align-items:center;margin-bottom:16px}
+.cover{width:52px;height:68px;border-radius:8px;background:linear-gradient(160deg,var(--accent),var(--accent2));display:grid;place-items:center;color:#fff;flex:none}
+footer{text-align:center;color:var(--muted);font-size:12.5px;margin-top:30px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo"><div class="mark"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.4" stroke-linecap="round"><path d="M4 15v-3a8 8 0 0 1 16 0v3"/><rect x="2.5" y="14" width="5" height="7" rx="2" fill="white"/><rect x="16.5" y="14" width="5" height="7" rx="2" fill="white"/></svg></div>Audiko</div>
+    <button class="icon-btn" id="theme" title="Mode sombre">🌙</button>
+  </header>
+
+  <h1>Ton ebook devient un <span>livre audio</span>.</h1>
+  <p class="lead">Dépose ton livre, choisis une voix, et récupère un MP3 par chapitre — ou tout le livre en un seul fichier. Gratuit, sans abonnement.</p>
+
+  <!-- ÉTAPE 1 -->
+  <section class="card" id="s1">
+    <div class="step"><b>1</b>Dépose ton ebook</div>
+    <div class="drop" id="drop">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" style="color:var(--accent)"><path d="M12 16V4m0 0l-4 4m4-4l4 4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+      <div class="big" id="dropTxt">Clique ou glisse ton fichier ici</div>
+      <div class="small">Jusqu'à 60 Mo</div>
+      <div class="formats"><span class="chip">PDF</span><span class="chip">Word .docx</span><span class="chip">EPUB</span><span class="chip">ODT</span><span class="chip">RTF</span><span class="chip">TXT</span><span class="chip">HTML</span></div>
+    </div>
+    <input type="file" id="file" class="hidden" accept=".pdf,.docx,.doc,.epub,.odt,.rtf,.txt,.md,.html,.htm">
+    <div class="err hidden" id="upErr"></div>
+  </section>
+
+  <!-- ÉTAPE 2 -->
+  <section class="card hidden" id="s2">
+    <div class="step"><b>2</b>Choisis la voix et vérifie les chapitres</div>
+    <div class="grid">
+      <div>
+        <label class="f">Titre du livre</label>
+        <input type="text" id="book">
+      </div>
+      <div>
+        <label class="f">Voix</label>
+        <div class="row">
+          <select id="voice"></select>
+          <button class="btn ghost" id="preview" title="Écouter la voix">▶</button>
+        </div>
+      </div>
+      <div>
+        <label class="f">Vitesse : <span id="rateV">normale</span></label>
+        <input type="range" id="rate" min="-30" max="30" step="5" value="0">
+      </div>
+      <div>
+        <label class="f">Ton de la voix : <span id="pitchV">normal</span></label>
+        <input type="range" id="pitch" min="-20" max="20" step="5" value="0">
+      </div>
+    </div>
+    <audio id="prevAudio" class="hidden"></audio>
+    <div style="margin-top:14px"><label class="check"><input type="checkbox" id="readTitles" checked> Lire le titre au début de chaque chapitre</label></div>
+
+    <div class="toolbar" style="margin-top:20px">
+      <div><b id="nbCh"></b> <span class="meta" id="dur"></span></div>
+      <div class="row"><button class="link" id="all">Tout cocher</button><span class="meta">·</span><button class="link" id="none">Tout décocher</button></div>
+    </div>
+    <div class="chapters" id="list"></div>
+    <div class="note">✏️ Tu peux renommer un chapitre en cliquant sur son titre, ou décocher ceux que tu ne veux pas (sommaire, remerciements…).</div>
+    <div style="margin-top:18px" class="row">
+      <button class="btn ghost" id="restart">Changer de fichier</button>
+      <button class="btn primary wide" id="go">🎧 Créer le livre audio</button>
+    </div>
+  </section>
+
+  <!-- ÉTAPE 3 -->
+  <section class="card hidden" id="s3">
+    <div class="book-head">
+      <div class="cover"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><path d="M4 15v-3a8 8 0 0 1 16 0v3"/><rect x="3" y="14" width="4" height="6" rx="1.5" fill="white"/><rect x="17" y="14" width="4" height="6" rx="1.5" fill="white"/></svg></div>
+      <div><div style="font-weight:800;font-size:18px" id="bookTitle"></div><div class="meta" id="voiceUsed"></div></div>
+    </div>
+    <div class="hero-progress"><div><div class="meta" id="phase">Conversion en cours…</div><div class="pct" id="pct">0 %</div></div><div class="meta" id="count"></div></div>
+    <div class="bar big"><i id="gbar"></i></div>
+    <div class="note" id="keepOpen">⏳ Garde cette page ouverte pendant la conversion (tu peux changer d'onglet). Les chapitres prêts sont écoutables tout de suite.</div>
+
+    <div class="merge" id="mergeBox">
+      <h3>📀 Rassembler tout le livre</h3>
+      <p id="mergeTxt">Dès que tous les chapitres sont prêts, un clic pour télécharger le livre audio complet en un seul MP3.</p>
+      <button class="btn primary wide" id="merge" disabled>Rassembler et télécharger le MP3 complet</button>
+      <button class="btn ghost wide hidden" id="retry" style="margin-top:10px">↻ Relancer les chapitres en échec</button>
+    </div>
+
+    <div class="step" style="margin-top:22px"><b>♪</b>Chapitres</div>
+    <div class="chapters" id="out"></div>
+    <div style="margin-top:16px" class="row"><button class="btn ghost" id="again">Modifier les réglages</button><button class="btn ghost" id="newBook">Nouveau livre</button></div>
+  </section>
+
+  <footer>Audiko · voix neuronales gratuites · les fichiers sont gardés 24 h sur le serveur</footer>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const store = { get(k){try{return localStorage.getItem(k)}catch(e){return null}}, set(k,v){try{localStorage.setItem(k,v)}catch(e){}}, del(k){try{localStorage.removeItem(k)}catch(e){}} };
+let job = null, poll = null, voices = [];
+
+// thème
+const setTheme = t => { document.documentElement.dataset.theme = t; $('#theme').textContent = t==='dark'?'☀️':'🌙'; store.set('audiko-theme', t); };
+setTheme(store.get('audiko-theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+$('#theme').onclick = () => setTheme(document.documentElement.dataset.theme==='dark'?'light':'dark');
+
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const mins = chars => { const r = 1 + (+$('#rate').value)/100; const m = Math.max(1, Math.round(chars/900/r)); return m>=60 ? `${Math.floor(m/60)} h ${String(m%60).padStart(2,'0')}` : `${m} min`; };
+const mb = b => (b/1048576).toFixed(1).replace('.',',')+' Mo';
+
+async function api(url, opts={}) {
+  const r = await fetch(url, opts);
+  if (!r.ok) { let m = 'Erreur '+r.status; try { m = (await r.json()).detail || m } catch(e){} throw new Error(m); }
+  return r;
+}
+
+// voix
+async function loadVoices() {
+  try { voices = await (await api('/api/voices')).json(); } catch(e) { voices = [{id:'fr-FR-HenriNeural',name:'Henri',gender:'Homme',region:'France'}]; }
+  const groups = {};
+  voices.forEach(v => (groups[v.region] ||= []).push(v));
+  $('#voice').innerHTML = Object.entries(groups).map(([g, vs]) => `<optgroup label="${esc(g)}">${vs.map(v=>`<option value="${v.id}">${esc(v.name)} — ${v.gender}</option>`).join('')}</optgroup>`).join('');
+  $('#voice').value = store.get('audiko-voice') || 'fr-FR-HenriNeural';
+  if (!$('#voice').value) $('#voice').selectedIndex = 0;
+}
+loadVoices();
+$('#voice').onchange = () => store.set('audiko-voice', $('#voice').value);
+const rateLabel = () => { const v=+$('#rate').value; $('#rateV').textContent = v===0?'normale':(v>0?'+':'')+v+' %'; updateTotals(); };
+const pitchLabel = () => { const v=+$('#pitch').value; $('#pitchV').textContent = v===0?'normal':(v>0?'plus aigu ':'plus grave ')+Math.abs(v); };
+$('#rate').oninput = rateLabel; $('#pitch').oninput = pitchLabel;
+
+$('#preview').onclick = async () => {
+  const b = $('#preview'); b.innerHTML = '<span class="spin"></span>'; b.disabled = true;
+  try {
+    const r = await api('/api/preview', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({voice:$('#voice').value, rate:+$('#rate').value, pitch:+$('#pitch').value})});
+    const a = $('#prevAudio'); a.src = URL.createObjectURL(await r.blob()); a.play();
+  } catch(e) { alert('Écoute impossible : ' + e.message); }
+  b.innerHTML = '▶'; b.disabled = false;
+};
+
+// étape 1 : upload
+const drop = $('#drop');
+drop.onclick = () => $('#file').click();
+drop.ondragover = e => { e.preventDefault(); drop.classList.add('over'); };
+drop.ondragleave = () => drop.classList.remove('over');
+drop.ondrop = e => { e.preventDefault(); drop.classList.remove('over'); if (e.dataTransfer.files[0]) upload(e.dataTransfer.files[0]); };
+$('#file').onchange = e => { if (e.target.files[0]) upload(e.target.files[0]); };
+
+async function upload(f) {
+  $('#upErr').classList.add('hidden');
+  $('#dropTxt').innerHTML = `<span class="spin"></span> Lecture de « ${esc(f.name)} »…`;
+  const fd = new FormData(); fd.append('file', f);
+  try {
+    job = await (await api('/api/upload', {method:'POST', body: fd})).json();
+    store.set('audiko-job', job.id);
+    showSetup();
+  } catch(e) {
+    $('#upErr').textContent = e.message; $('#upErr').classList.remove('hidden');
+  }
+  $('#dropTxt').textContent = 'Clique ou glisse ton fichier ici';
+  $('#file').value = '';
+}
+
+// étape 2 : réglages
+function showSetup() {
+  $('#s1').classList.add('hidden'); $('#s3').classList.add('hidden'); $('#s2').classList.remove('hidden');
+  $('#book').value = job.book;
+  $('#list').innerHTML = job.chapters.map(c => `
+    <div class="ch ${c.selected?'':'off'}" data-i="${c.index}">
+      <input type="checkbox" class="sel" ${c.selected?'checked':''} style="width:18px;height:18px;accent-color:var(--accent)">
+      <div><input type="text" class="title" value="${esc(c.title)}"><div class="meta">${c.chars.toLocaleString('fr-FR')} caractères · ≈ <span class="d" data-c="${c.chars}"></span></div></div>
+      <div class="num">${c.index+1}</div>
+    </div>`).join('');
+  $('#list').querySelectorAll('.sel').forEach(cb => cb.onchange = () => { cb.closest('.ch').classList.toggle('off', !cb.checked); updateTotals(); });
+  updateTotals();
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+function updateTotals() {
+  if (!job) return;
+  $('#list').querySelectorAll('.d').forEach(s => s.textContent = mins(+s.dataset.c));
+  const sel = [...$('#list').querySelectorAll('.ch')].filter(r => r.querySelector('.sel').checked);
+  const chars = sel.reduce((a, r) => a + job.chapters[+r.dataset.i].chars, 0);
+  $('#nbCh').textContent = `${sel.length} chapitre${sel.length>1?'s':''} sur ${job.chapters.length}`;
+  $('#dur').textContent = sel.length ? `· durée estimée ≈ ${mins(chars)}` : '';
+  $('#go').disabled = !sel.length;
+}
+$('#all').onclick = () => { $('#list').querySelectorAll('.sel').forEach(c => { c.checked = true; c.closest('.ch').classList.remove('off'); }); updateTotals(); };
+$('#none').onclick = () => { $('#list').querySelectorAll('.sel').forEach(c => { c.checked = false; c.closest('.ch').classList.add('off'); }); updateTotals(); };
+$('#restart').onclick = $('#newBook').onclick = () => { stopPoll(); job = null; store.del('audiko-job'); $('#s2').classList.add('hidden'); $('#s3').classList.add('hidden'); $('#s1').classList.remove('hidden'); };
+
+$('#go').onclick = async () => {
+  const chapters = [...$('#list').querySelectorAll('.ch')].map(r => ({index:+r.dataset.i, title:r.querySelector('.title').value, selected:r.querySelector('.sel').checked}));
+  $('#go').disabled = true; $('#go').innerHTML = '<span class="spin"></span> Lancement…';
+  try {
+    job = await (await api(`/api/job/${job.id}/convert`, {method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({voice:$('#voice').value, rate:+$('#rate').value, pitch:+$('#pitch').value, read_titles:$('#readTitles').checked, book:$('#book').value, chapters})})).json();
+    showProgress();
+  } catch(e) { alert(e.message); }
+  $('#go').disabled = false; $('#go').innerHTML = '🎧 Créer le livre audio';
+};
+
+// étape 3 : progression
+const STATUS = {pending:'En attente', running:'En cours', done:'Prêt', error:'Échec'};
+function showProgress() {
+  $('#s1').classList.add('hidden'); $('#s2').classList.add('hidden'); $('#s3').classList.remove('hidden');
+  $('#bookTitle').textContent = job.book;
+  const v = voices.find(x => x.id === job.voice);
+  $('#voiceUsed').textContent = v ? `Voix : ${v.name} (${v.gender}, ${v.region})` : '';
+  $('#out').innerHTML = job.chapters.filter(c => c.selected).map(c => `
+    <div class="ch" id="o${c.index}" style="grid-template-columns:auto 1fr">
+      <div class="num">${c.index+1}</div>
+      <div>
+        <div class="row" style="justify-content:space-between"><b style="font-size:15px">${esc(c.title)}</b><span class="st pending">En attente</span></div>
+        <div class="bar"><i></i></div>
+        <div class="player"></div>
+      </div>
+    </div>`).join('');
+  render(); startPoll();
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+function render() {
+  const sel = job.chapters.filter(c => c.selected);
+  const done = sel.filter(c => c.status==='done').length;
+  const errs = sel.filter(c => c.status==='error').length;
+  const pct = sel.length ? Math.round(sel.reduce((a,c) => a + (c.status==='done'?100:c.progress), 0) / sel.length) : 0;
+  $('#pct').textContent = pct + ' %'; $('#gbar').style.width = pct + '%';
+  $('#count').textContent = `${done} / ${sel.length} chapitres prêts`;
+  const running = job.status === 'running';
+  $('#phase').textContent = running ? 'Conversion en cours…' : (errs ? 'Terminé avec des erreurs' : 'Ton livre audio est prêt ! 🎉');
+  $('#keepOpen').classList.toggle('hidden', !running);
+  sel.forEach(c => {
+    const row = $('#o'+c.index); if (!row) return;
+    const st = row.querySelector('.st'); st.className = 'st '+c.status; st.textContent = STATUS[c.status] + (c.status==='running'?` ${c.progress} %`:'');
+    row.querySelector('.bar i').style.width = (c.status==='done'?100:c.progress) + '%';
+    row.querySelector('.bar').classList.toggle('hidden', c.status==='done');
+    const p = row.querySelector('.player');
+    if (c.status==='done' && !p.dataset.ok) {
+      p.dataset.ok = 1;
+      const u = `/api/job/${job.id}/chapter/${c.index}.mp3`;
+      p.innerHTML = `<audio controls preload="none" src="${u}"></audio><div class="row" style="justify-content:space-between"><span class="meta">${mb(c.size)}</span><a class="dl" href="${u}?dl=1">⬇ Télécharger ce chapitre</a></div>`;
+    } else if (c.status==='error') {
+      p.dataset.ok = ''; p.innerHTML = `<div class="err" style="font-size:13px">${esc(c.error||'Erreur')}</div>`;
+    }
+  });
+  $('#merge').disabled = done === 0 || running;
+  $('#mergeTxt').textContent = running ? 'Dès que tous les chapitres sont prêts, un clic pour télécharger le livre audio complet en un seul MP3.'
+    : errs ? `${errs} chapitre(s) en échec. Relance-les, ou rassemble quand même les ${done} chapitres prêts.`
+    : `Les ${done} chapitres, dans l'ordre, en un seul fichier MP3 (${mb(sel.reduce((a,c)=>a+c.size,0))}).`;
+  $('#retry').classList.toggle('hidden', !(errs && !running));
+}
+async function tick() {
+  try { job = await (await api(`/api/job/${job.id}`)).json(); render(); if (job.status !== 'running') stopPoll(); }
+  catch(e) { if (/introuvable|expirée/.test(e.message)) { stopPoll(); alert(e.message); $('#newBook').click(); } }
+}
+function startPoll(){ stopPoll(); poll = setInterval(tick, 2500); }
+function stopPoll(){ if (poll) clearInterval(poll); poll = null; }
+
+$('#merge').onclick = () => {
+  const a = document.createElement('a'); a.href = `/api/job/${job.id}/full.mp3`; a.download = ''; document.body.appendChild(a); a.click(); a.remove();
+};
+$('#retry').onclick = async () => { job = await (await api(`/api/job/${job.id}/retry`, {method:'POST'})).json(); render(); startPoll(); };
+$('#again').onclick = () => { stopPoll(); showSetup(); };
+
+// reprise après rechargement de la page
+(async () => {
+  const id = store.get('audiko-job'); if (!id) return;
+  try { job = await (await api(`/api/job/${id}`)).json(); if (job.status === 'ready') showSetup(); else showProgress(); }
+  catch(e) { store.del('audiko-job'); }
+})();
+</script>
+</body>
+</html>
